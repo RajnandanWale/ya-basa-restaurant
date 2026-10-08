@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: ya-basa-backend}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: ya-basa-backend}}
+  template:
+    metadata: {labels: {app: ya-basa-backend}}
+    spec:
+      containers:
+      - name: backend
+        image: ya-basa-backend:1.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: DATABASE_URL, value: postgresql://postgres:postgres@ya-basa-postgres:5432/yabasa?schema=public}
+        - {name: JWT_SECRET, value: change-this-for-production}
+        - {name: PORT, value: "5000"}
+        ports: [{containerPort: 5000}]
+        readinessProbe:
+          httpGet: {path: /api/health, port: 5000}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata: {name: ya-basa-backend}
+spec:
+  selector: {app: ya-basa-backend}
+  ports: [{port: 5000, targetPort: 5000}]

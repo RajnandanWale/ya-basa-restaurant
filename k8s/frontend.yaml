@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: ya-basa-frontend}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: ya-basa-frontend}}
+  template:
+    metadata: {labels: {app: ya-basa-frontend}}
+    spec:
+      containers:
+      - name: frontend
+        image: ya-basa-frontend:1.0
+        imagePullPolicy: IfNotPresent
+        ports: [{containerPort: 80}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: ya-basa-frontend}
+spec:
+  type: LoadBalancer
+  selector: {app: ya-basa-frontend}
+  ports: [{port: 80, targetPort: 80}]

@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  STAFF
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  READY_FOR_PICKUP
+  PICKED_UP
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  SEATED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  phone String?
+  passwordHash String
+  role Role @default(CUSTOMER)
+  orders Order[]
+  reservations Reservation[]
+  reviews Review[]
+  couponUsages CouponUsage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MenuCategory {
+  id String @id @default(cuid())
+  name String @unique
+  items MenuItem[]
+}
+
+model MenuItem {
+  id String @id @default(cuid())
+  name String
+  description String
+  ingredients String?
+  price Decimal @db.Decimal(10,2)
+  imageUrl String?
+  isVeg Boolean @default(false)
+  isSpicy Boolean @default(false)
+  isBestseller Boolean @default(false)
+  isAvailable Boolean @default(true)
+  categoryId String
+  category MenuCategory @relation(fields:[categoryId],references:[id])
+  orderItems OrderItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([categoryId])
+}
+
+model Order {
+  id String @id @default(cuid())
+  userId String?
+  user User? @relation(fields:[userId],references:[id])
+  customerName String
+  mobile String
+  email String?
+  type String
+  address String?
+  specialInstructions String?
+  subtotal Decimal @db.Decimal(10,2)
+  tax Decimal @db.Decimal(10,2)
+  deliveryCharge Decimal @db.Decimal(10,2)
+  discount Decimal @db.Decimal(10,2)
+  total Decimal @db.Decimal(10,2)
+  status OrderStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  items OrderItem[]
+  payment Payment?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id String @id @default(cuid())
+  orderId String
+  order Order @relation(fields:[orderId],references:[id],onDelete:Cascade)
+  menuItemId String
+  menuItem MenuItem @relation(fields:[menuItemId],references:[id])
+  quantity Int
+  unitPrice Decimal @db.Decimal(10,2)
+  specialInstructions String?
+}
+
+model Payment {
+  id String @id @default(cuid())
+  orderId String @unique
+  order Order @relation(fields:[orderId],references:[id])
+  provider String
+  providerOrderId String?
+  providerPaymentId String?
+  amount Decimal @db.Decimal(10,2)
+  status PaymentStatus @default(PENDING)
+  createdAt DateTime @default(now())
+}
+
+model RestaurantTable {
+  id String @id @default(cuid())
+  name String @unique
+  capacity Int
+  isAvailable Boolean @default(true)
+  reservations Reservation[]
+}
+
+model Reservation {
+  id String @id @default(cuid())
+  userId String?
+  user User? @relation(fields:[userId],references:[id])
+  tableId String?
+  table RestaurantTable? @relation(fields:[tableId],references:[id])
+  name String
+  mobile String
+  email String?
+  date DateTime
+  time String
+  guests Int
+  specialRequest String?
+  status ReservationStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  @@index([date])
+}
+
+model Review {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId],references:[id])
+  rating Int
+  comment String
+  approved Boolean @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Coupon {
+  id String @id @default(cuid())
+  code String @unique
+  discountType String
+  value Decimal @db.Decimal(10,2)
+  minOrder Decimal @db.Decimal(10,2) @default(0)
+  maxDiscount Decimal? @db.Decimal(10,2)
+  startsAt DateTime
+  expiresAt DateTime
+  usageLimit Int?
+  active Boolean @default(true)
+  usages CouponUsage[]
+}
+
+model CouponUsage {
+  id String @id @default(cuid())
+  couponId String
+  coupon Coupon @relation(fields:[couponId],references:[id])
+  userId String
+  user User @relation(fields:[userId],references:[id])
+  createdAt DateTime @default(now())
+}
+
+model Ingredient {
+  id String @id @default(cuid())
+  name String @unique
+  unit String
+  stock Decimal @db.Decimal(10,2)
+  minimumStock Decimal @db.Decimal(10,2)
+  transactions InventoryTransaction[]
+}
+
+model InventoryTransaction {
+  id String @id @default(cuid())
+  ingredientId String
+  ingredient Ingredient @relation(fields:[ingredientId],references:[id])
+  quantity Decimal @db.Decimal(10,2)
+  type String
+  note String?
+  createdAt DateTime @default(now())
+}
+
+model GalleryImage {
+  id String @id @default(cuid())
+  title String?
+  category String
+  imageUrl String
+  createdAt DateTime @default(now())
+}
+
+model RestaurantSettings {
+  id String @id @default(cuid())
+  name String @default("Ya Basa – Kitchen & Bar")
+  address String
+  phone String
+  email String?
+  openingTime String @default("12:00")
+  closingTime String @default("23:00")
+  deliveryEnabled Boolean @default(true)
+  takeawayEnabled Boolean @default(true)
+  dineInEnabled Boolean @default(true)
+  minimumOrder Decimal @db.Decimal(10,2) @default(0)
+  deliveryCharge Decimal @db.Decimal(10,2) @default(0)
+  updatedAt DateTime @updatedAt
+}
